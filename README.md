@@ -7,7 +7,7 @@ Transforma flujos JSON crudos desde la API pública de **Open-Meteo** en visuali
 ---
 
 ## Demo en Vivo
-> **[Ver aplicación publicada aquí] ()**
+> **[Ver aplicación publicada aquí](https://jesikiwi15.github.io/sumativa-3-logistica-dss/)**
 
 ---
 
@@ -35,8 +35,25 @@ La aplicación implementa un flujo unidireccional desacoplado en Vanilla JavaScr
 ## Estructura del Proyecto
 
 ```text
-sumativa3-logistica-dss/
+sumativa-3-logistica-dss/
 ├── index.html   # Estructura semántica HTML5, accesibilidad ARIA y drawer técnico
 ├── styles.css   # Sistema de diseño claro pastel + soporte modo oscuro con variables CSS
 ├── app.js       # Estado central, ingesta resiliente, analítica y motor SVG puro
 └── README.md    # Documentación del proyecto
+```
+
+---
+
+## Ejecución Local
+
+1. Clonar o descargar el repositorio:
+   ```bash
+   git clone [https://github.com/jesikiwi15/sumativa-3-logistica-dss.git](https://github.com/jesikiwi15/sumativa-3-logistica-dss.git)
+   ```
+2. Abrir la carpeta en **Visual Studio Code**.
+3. Ejecutar `index.html` con la extensión **Live Server** (clic derecho → *Open with Live Server*).
+
+---
+
+## Autora
+**Jesica Loyola** — Ingeniería en Informática, INACAP Sede Maipú.
