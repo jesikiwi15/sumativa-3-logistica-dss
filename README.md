@@ -48,7 +48,7 @@ sumativa-3-logistica-dss/
 
 1. Clonar o descargar el repositorio:
    ```bash
-   git clone [https://github.com/jesikiwi15/sumativa-3-logistica-dss.git](https://github.com/jesikiwi15/sumativa-3-logistica-dss.git)
+   git clone https://github.com/jesikiwi15/sumativa-3-logistica-dss.git
    ```
 2. Abrir la carpeta en **Visual Studio Code**.
 3. Ejecutar `index.html` con la extensión **Live Server** (clic derecho → *Open with Live Server*).
