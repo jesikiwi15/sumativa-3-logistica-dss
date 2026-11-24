@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RM·OPS — Torre de Control Climático &amp; Ruteo Logístico</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Encabezado Minimalista -->
+  <header class="topbar">
+    <div class="topbar__left">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div class="brand-text">
+        <div class="brand-row">
+          <h1>RM·OPS Logística</h1>
+          <span class="tag-course">INACAP · Sumativa 3</span>
+        </div>
+        <p>Soporte a la Decisión en Tiempo Real · Región Metropolitana</p>
+      </div>
+    </div>
+
+    <div class="topbar__right">
+      <div id="statusBadge" class="status-dot-pill status--loading" aria-live="polite">
+        <span class="pulse-dot"></span>
+        <span id="statusText">Conectando...</span>
+      </div>
+
+      <div class="toolbar-divider" aria-hidden="true"></div>
+
+      <button id="btnRefresh" class="icon-btn" type="button" title="Forzar recarga desde Open-Meteo">
+        ↻ <span>Actualizar</span>
+      </button>
+      <button id="btnPolling" class="icon-btn" type="button" aria-pressed="false" title="Activar actualización automática cada 60s">
+        ⏱ <span id="pollingLabel">Auto 60s</span>
+      </button>
+      <button id="btnSimularFallo" class="icon-btn icon-btn--warn" type="button" title="Probar resiliencia ante caída de red">
+        ⚡ <span>Fallback</span>
+      </button>
+      <button id="btnOpenDrawer" class="icon-btn" type="button" title="Ver Payload JSON y métricas de red">
+        <code>{ }</code> <span>Payload</span>
+      </button>
+      <button id="btnTheme" class="icon-btn icon-btn--square" type="button" aria-label="Cambiar modo claro/oscuro" title="Cambiar tema">
+        ☾
+      </button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <!-- Barra de Comandos (Controles Segmentados tipo Cápsula) -->
+    <section class="command-bar" aria-label="Filtros de análisis">
+      <div class="command-group">
+        <span class="command-label">Variable</span>
+        <div class="segmented" role="group" aria-label="Variable climática" id="metricaGroup">
+          <button type="button" class="seg-btn is-active" data-metrica="temperatura">Temperatura (°C)</button>
+          <button type="button" class="seg-btn" data-metrica="viento">Viento (km/h)</button>
+          <button type="button" class="seg-btn" data-metrica="precipitacion">Lluvia (%)</button>
+        </div>
+      </div>
+
+      <div class="command-group">
+        <span class="command-label">Ventana</span>
+        <div class="segmented" role="group" aria-label="Ventana horaria" id="ventanaGroup">
+          <button type="button" class="seg-btn is-active" data-ventana="hoy_operativo">Hoy 06–22h</button>
+          <button type="button" class="seg-btn" data-ventana="hoy_24h">Hoy 24h</button>
+          <button type="button" class="seg-btn" data-ventana="manana_operativo">Mañana</button>
+        </div>
+      </div>
+
+      <div class="command-group command-group--slider">
+        <div class="slider-header">
+          <span class="command-label">Umbral Crítico</span>
+          <strong id="umbralValue" class="tabular">27 °C</strong>
+        </div>
+        <input id="rangeUmbral" type="range" min="15" max="40" step="1" value="27" aria-label="Ajustar umbral crítico" />
+      </div>
+    </section>
+
+    <!-- Banda de Insight Ejecutivo (Estilo Knaflic) -->
+    <section id="insightStrip" class="insight-strip is-ok" aria-live="polite">
+      <div class="insight-strip__main">
+        <div class="insight-meta">
+          <span id="insightTag" class="pill-state">EVALUANDO</span>
+          <span id="insightHubLabel" class="insight-hub">Maipú · Polo Industrial</span>
+          <span id="lastUpdated" class="insight-time tabular">--:--:--</span>
+        </div>
+        <h2 id="insightHeadline">Obteniendo telemetría climática de los 5 hubs logísticos RM...</h2>
+        <p id="insightBody">Calculando ventanas seguras de despacho y riesgo operativo.</p>
+      </div>
+      <div class="insight-strip__windows" id="dispatchWindows"></div>
+    </section>
+
+    <!-- Bento Grid: 4 KPIs Contextualizados con Sparklines SVG -->
+    <section class="kpi-row" aria-label="Indicadores clave">
+      <article class="card kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label" id="kpi1Label">PICO PROYECTADO</span>
+          <span class="kpi-badge" id="kpi1Delta">--</span>
+        </div>
+        <div class="kpi-bottom">
+          <div>
+            <div class="kpi-value tabular" id="kpi1Value">--</div>
+            <div class="kpi-sub" id="kpi1Sub">--</div>
+          </div>
+          <svg class="sparkline" id="spark1" viewBox="0 0 96 32" aria-hidden="true"></svg>
+        </div>
+      </article>
+
+      <article class="card kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">PROMEDIO VENTANA</span>
+          <span class="kpi-badge kpi-badge--neutral" id="kpi2Range">--</span>
+        </div>
+        <div class="kpi-bottom">
+          <div>
+            <div class="kpi-value tabular" id="kpi2Value">--</div>
+            <div class="kpi-sub" id="kpi2Sub">--</div>
+          </div>
+          <svg class="sparkline" id="spark2" viewBox="0 0 96 32" aria-hidden="true"></svg>
+        </div>
+      </article>
+
+      <article class="card kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">EXPOSICIÓN CRÍTICA</span>
+          <span class="kpi-badge" id="kpi3Pct">--</span>
+        </div>
+        <div class="kpi-bottom">
+          <div>
+            <div class="kpi-value tabular" id="kpi3Value">--</div>
+            <div class="kpi-sub" id="kpi3Sub">--</div>
+          </div>
+          <div class="exposure-ring" id="exposureMiniBar" aria-hidden="true"></div>
+        </div>
+      </article>
+
+      <article class="card kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">ÍNDICE RIESGO HUB</span>
+          <span class="kpi-badge" id="kpi4State">--</span>
+        </div>
+        <div class="kpi-bottom">
+          <div>
+            <div class="kpi-value tabular" id="kpi4Value">--</div>
+            <div class="kpi-sub" id="kpi4Sub">--</div>
+          </div>
+          <svg class="sparkline" id="spark4" viewBox="0 0 96 32" aria-hidden="true"></svg>
+        </div>
+      </article>
+    </section>
+
+    <!-- Vista Dividida 65% Gráfico SVG / 35% Ranking Multi-Hub -->
+    <section class="workspace-grid">
+      <article class="card chart-card">
+        <div class="card-header">
+          <div>
+            <h3 id="chartTitle">Curva Operativa Horaria</h3>
+            <p id="chartSubtitle">Pasa el cursor sobre la serie para inspeccionar desvíos frente al umbral.</p>
+          </div>
+          <div class="legend">
+            <span class="legend-item"><i class="swatch swatch--line"></i>Serie Horaria</span>
+            <span class="legend-item"><i class="swatch swatch--ma"></i>Media Móvil 3h</span>
+            <span class="legend-item"><i class="swatch swatch--threshold"></i>Umbral</span>
+            <span class="legend-item"><i class="swatch swatch--alert"></i>Anomalía</span>
+          </div>
+        </div>
+
+        <div class="chart-stage" id="chartStage">
+          <div id="loadingOverlay" class="loading-overlay" hidden>
+            <div class="spinner"></div>
+            <span>Sincronizando 5 comunas RM...</span>
+          </div>
+
+          <svg
+            id="mainSvg"
+            viewBox="0 0 820 340"
+            role="img"
+            aria-labelledby="svgTitle svgDesc"
+          >
+            <title id="svgTitle">Curva operativa de riesgo climático por hora</title>
+            <desc id="svgDesc">Gráfico vectorial SVG con área sombreada, zona crítica sobre umbral y media móvil de 3 horas.</desc>
+          </svg>
+
+          <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+        </div>
+
+        <!-- Micro-línea de tiempo de bloques operativos -->
+        <div class="timeline-strip">
+          <div class="timeline-strip__header">
+            <span>Mapa de Ventanas Horarias</span>
+            <span class="timeline-strip__hint">Verde/Neutro: Despacho normal · Rojo: Requiere mitigación</span>
+          </div>
+          <div id="timelineCells" class="timeline-cells" aria-label="Estado por hora"></div>
+        </div>
+      </article>
+
+      <!-- Columna Lateral: Ranking Comparativo + Plan de Acción -->
+      <aside class="sidebar-col">
+        <article class="card ranking-card">
+          <div class="card-header card-header--compact">
+            <div>
+              <h3>Red Logística RM</h3>
+              <p>Haz clic en un hub para inspeccionarlo</p>
+            </div>
+            <span class="count-pill">5 Hubs</span>
+          </div>
+          <div id="hubRankingList" class="ranking-list" role="listbox" aria-label="Ranking de riesgo por comuna"></div>
+        </article>
+
+        <article class="card actions-card">
+          <div class="card-header card-header--compact">
+            <h3>Protocolo Sugerido</h3>
+            <span id="protocolTag" class="count-pill">Operativo</span>
+          </div>
+          <ol id="actionList" class="action-steps">
+            <li>Esperando datos de telemetría...</li>
+          </ol>
+        </article>
+      </aside>
+    </section>
+  </main>
+
+  <!-- Cajón Lateral Deslizable: Inspector Técnico JSON (Para Defensa Oral) -->
+  <div id="drawerBackdrop" class="drawer-backdrop" hidden></div>
+  <aside id="jsonDrawer" class="drawer" aria-label="Inspector técnico de API" aria-hidden="true">
+    <div class="drawer__header">
+      <div>
+        <h3>Inspector Técnico API &amp; Caché</h3>
+        <p>Trazabilidad JSON en vivo para validación de arquitectura</p>
+      </div>
+      <button id="btnCloseDrawer" class="icon-btn icon-btn--square" type="button" aria-label="Cerrar inspector">✕</button>
+    </div>
+
+    <div class="drawer__meta">
+      <div class="meta-row">
+        <span>Origen activo</span>
+        <strong id="drawerOrigin">--</strong>
+      </div>
+      <div class="meta-row">
+        <span>Latencia</span>
+        <strong id="drawerLatency" class="tabular">--</strong>
+      </div>
+      <div class="meta-row">
+        <span>Política caché</span>
+        <strong>localStorage · TTL 60s</strong>
+      </div>
+      <div class="meta-row">
+        <span>Endpoint</span>
+        <code id="drawerEndpoint" class="endpoint-code">--</code>
+      </div>
+    </div>
+
+    <div class="drawer__code-header">
+      <span>Payload Normalizado (Hub Seleccionado)</span>
+      <button id="btnCopyJson" class="mini-copy-btn" type="button">Copiar JSON</button>
+    </div>
+    <pre id="jsonViewer" class="json-code">{}</pre>
+  </aside>
+
+  <!-- Notificación breve de sincronización -->
+  <div id="syncToast" class="sync-toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
